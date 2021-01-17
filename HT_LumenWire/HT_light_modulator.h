@@ -20,8 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define	CLOCK_SPEED			16000000
-#define LIGHT_SEND_PIN		6
-#define LIGHT_RECEIVE_PIN	7
+#define DEFAULT_LIGHT_SEND_PIN		6
+#define DEFAULT_LIGHT_RECEIVE_PIN	7
 
 /* Private typedef -----------------------------------------------------------*/
 class HT_PhotoTransmitter
@@ -30,13 +30,19 @@ class HT_PhotoTransmitter
 	uint8_t tx_buffer[44];
 	uint8_t tx_bitnum;			// bit number to be transmitted
 	int send_flag;				// light send flag
-	
+	int light_send_pin = DEFAULT_LIGHT_SEND_PIN;
+
+
 	public:
 		void set_speed(unsigned long custom_speed){
 			
 			tx_speed = custom_speed;
 			
 		}
+
+		void set_light_send_pin(int custom_light_send_pin){
+            light_send_pin = custom_light_send_pin;
+        }
 		
 		unsigned long get_speed(){
 			
@@ -66,7 +72,7 @@ class HT_PhotoTransmitter
 			sei();//allow interrupts
 			
 			//set light pin as output
-			pinMode(LIGHT_SEND_PIN, OUTPUT);
+			pinMode(light_send_pin, OUTPUT);
 		}
 		
 		void manchester_modulate(uint16_t light_msg){
@@ -111,7 +117,7 @@ class HT_PhotoTransmitter
 
 			// Generate wave based on manchester input
 			if(send_flag){
-				digitalWrite(LIGHT_SEND_PIN,tx_buffer[tx_bitnum]);
+				digitalWrite(light_send_pin,tx_buffer[tx_bitnum]);
 
 				// shift to next bit in the send buffer
 				if(tx_bitnum < 43){
@@ -135,13 +141,16 @@ class HT_PhotoReceiver
 	uint16_t msg_raw;
 	uint8_t msg_done;
 	uint8_t can_print;
-
+    int light_receive_pin = DEFAULT_LIGHT_RECEIVE_PIN;
 	public:
 		void set_speed(unsigned long custom_speed){
 			
 			rx_speed = custom_speed;
 			
 		}
+		void set_light_receive_pin(int custom_light_receive_pin){
+            light_receive_pin = custom_light_receive_pin;
+        }
 		
 		unsigned long get_speed(){
 			
@@ -172,7 +181,7 @@ class HT_PhotoReceiver
 			sei();//allow interrupts
 			
 			//set photodiode pin as input
-			pinMode(LIGHT_RECEIVE_PIN, INPUT);
+			pinMode(light_receive_pin, INPUT);
 		}
 		
 		uint16_t manchester_demodulate(){
@@ -199,7 +208,7 @@ class HT_PhotoReceiver
 			int tmp;
 			
 			if(!recv_flag){
-				tmp = !!(PIND & (1 << LIGHT_RECEIVE_PIN));		// direct pin access is better (quicker) than digitalRead at high frequencies
+				tmp = !!(PIND & (1 << light_receive_pin));		// direct pin access is better (quicker) than digitalRead at high frequencies
 				switch(rx_bitnum){
 					case 0:
 						if(tmp == 1) rx_bitnum = 1;
@@ -223,7 +232,7 @@ class HT_PhotoReceiver
 						break;
 				}
 			} else if(rx_bitnum < 44){
-				rx_buffer[rx_bitnum] = !!(PIND & (1 << LIGHT_RECEIVE_PIN));
+				rx_buffer[rx_bitnum] = !!(PIND & (1 << light_receive_pin));
 				rx_bitnum++;
 			} else {
 				rx_bitnum = 0;
@@ -245,6 +254,12 @@ class HT_PhotoReceiver
 			}
 			return (msg_done);
 		}
+
+		uint8_t getMsgCodeByte(){
+		   uint8_t result = msg_done;
+		   msg_done = 255;
+            return (result);
+        }
 };
 
 /* Private macro -------------------------------------------------------------*/
